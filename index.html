@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>購屋能力評估試算工具</title>
+
+<!-- ── PWA Meta Tags ── -->
+<meta name="application-name" content="購屋試算">
+<meta name="description" content="評估家庭購屋能力，提供三段壓力分析與策略比較">
+<meta name="theme-color" content="#c9a84c">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- Apple / iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="購屋試算">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-startup-image" href="icons/icon-512x512.png">
+
+<!-- Android / General -->
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+
+<!-- Manifest -->
+<link rel="manifest" href="manifest.json">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117; --bg2: #161b27; --bg3: #1e2536; --bg4: #242c3d;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --gold: #c9a84c; --teal: #3ecfb2;
+    --red: #e05c5c; --orange: #e09a3e; --green: #3ecfa0;
+    --text: #e8ecf4; --text2: #8d97b0; --text3: #5a6378;
+    --radius: 14px; --shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Noto Sans TC', sans-serif;
+    min-height: 100vh; padding: 56px 20px 50vh;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% -10%, rgba(201,168,76,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 85% 110%, rgba(62,207,178,0.05) 0%, transparent 60%);
+  }
+  .page-title { text-align: center; margin-bottom: 0; }
+  .page-title h1 {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: clamp(1.28rem, 3.2vw, 1.92rem);
+    font-weight: 700; letter-spacing: 0.12em; color: var(--text); display: inline-block;
+  }
+  .page-title h1::after {
+    content: ''; display: block; height: 2px; width: 60%; margin: 8px auto 0;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .page-title p { margin-top: 0; color: var(--text2); font-size: 0.68rem; letter-spacing: 0.06em; }
+  .container { max-width: 1188px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; align-items: center; }
+  .card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px 32px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0.5;
+  }
+  .section-label {
+    font-size: 0.72rem; letter-spacing: 0.18em; color: var(--gold); font-weight: 500;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border2); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+  @media (max-width: 580px) { .grid-2 { grid-template-columns: 1fr; } .card { padding: 20px 18px; } }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label { font-size: 0.8rem; color: var(--text2); letter-spacing: 0.04em; font-weight: 500; }
+
+  /* Stepper input */
+  .stepper {
+    display: flex; align-items: stretch;
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px; overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .stepper:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
+  .stepper input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.95rem; padding: 11px 10px; text-align: center;
+    appearance: none; -webkit-appearance: none; min-width: 0;
+  }
+  .stepper input::-webkit-outer-spin-button,
+  .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .step-btn {
+    width: 36px; background: var(--bg4); border: none; color: var(--text2);
+    font-size: 1rem; cursor: pointer; transition: background 0.15s, color 0.15s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step-btn:hover { background: var(--bg3); color: var(--gold); }
+  .step-btn:first-child { border-right: 1px solid var(--border2); }
+  .step-btn:last-child  { border-left:  1px solid var(--border2); }
+
+  .field select {
+    background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
+    color: var(--text); font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem;
+    padding: 11px 36px 11px 14px; outline: none; width: 100%;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238d97b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  .field select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,0.12); }
+  .credit-section { margin-top: 24px; }
+  .calc-btn {
+    display: block; width: 100%; margin-top: 2rem; padding: 15px;
+    background: linear-gradient(135deg, #b8943f, #c9a84c, #ddb96a);
+    border: none; border-radius: 10px; color: #1a1200;
+    font-family: 'Noto Sans TC', sans-serif; font-size: 1.05rem; font-weight: 700;
+    letter-spacing: 0.14em; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.3);
+  }
+  .calc-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(201,168,76,0.45); filter: brightness(1.06); }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* ── Result rows ── */
+  .results-stack { display: flex; flex-direction: column; gap: 14px; }
+  .result-row {
+    background: var(--bg3); border-radius: 10px; border: 1px solid var(--border);
+    display: grid; grid-template-columns: 118px 1fr 1.6fr 52px;
+    align-items: stretch; overflow: hidden;
+    animation: fadeIn 0.4s ease forwards;
+  }
+  .result-row.healthy { border-color: rgba(62,207,160,0.35); }
+  .result-row.high    { border-color: rgba(224,154,62,0.35); }
+  .result-row.danger  { border-color: rgba(224,92,92,0.35); }
+
+  .row-badge-col {
+    padding: 16px 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    border-right: 1px solid var(--border);
+  }
+  .result-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .badge-healthy { background: rgba(62,207,160,0.15); color: var(--green); }
+  .badge-high    { background: rgba(224,154,62,0.15); color: var(--orange); }
+  .badge-danger  { background: rgba(224,92,92,0.15); color: var(--red); }
+  .badge-sub { font-size: 0.65rem; color: var(--text3); text-align: center; line-height: 1.4; }
+
+  .row-metric {
+    padding: 16px 18px; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  }
+  .row-metric.center-content { align-items: center; text-align: center; }
+  .metric-label { font-size: 0.68rem; color: var(--text3); letter-spacing: 0.04em; }
+  .metric-value {
+    font-family: 'DM Mono', monospace; font-weight: 500; color: var(--text); line-height: 1.25;
+  }
+  .metric-value.lg { font-size: 1.6rem; }
+  .metric-value.md { font-size: 1.05rem; font-weight: 300; }
+  .metric-sub { font-size: 0.68rem; color: var(--text3); margin-top: 1px; }
+
+  .row-add-col {
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+  .add-plus-btn {
+    width: 27px; height: 27px;
+    border-radius: 50%; border: 1.5px solid var(--border2);
+    background: var(--bg4); color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1.05rem; line-height: 1;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .add-plus-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(201,168,76,0.1); transform: scale(1.12); }
+
+  /* ── Strategy & Compare table (horizontal layout: rows = entries, cols = metrics) ── */
+  .compare-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 36px 20px; color: var(--text3); font-size: 0.85rem; text-align: center;
+  }
+  .compare-empty svg { opacity: 0.3; }
+  .compare-scroll { overflow-x: auto; }
+  .compare-header-row { display: flex; align-items: center; margin-bottom: 18px; }
+  .compare-count { font-size: 0.72rem; color: var(--text3); letter-spacing: 0.04em; margin-left: auto; }
+
+  /* Horizontal table: rows = entries */
+  .strategy-table {
+    width: 100%; border-collapse: separate; border-spacing: 0; min-width: 580px;
+  }
+  .strategy-table th, .strategy-table td {
+    padding: 0; border-bottom: 1px solid var(--border);
+  }
+  /* header row */
+  .strategy-table thead th {
+    background: var(--bg3); color: var(--text3); font-size: 0.67rem; font-weight: 500;
+    letter-spacing: 0.06em; padding: 0; text-align: left; white-space: normal;
+    border-right: 1px solid var(--border);
+  }
+  .strategy-table thead th:first-child { border-radius: 8px 0 0 0; }
+  .strategy-table thead th:last-child  { border-right: none; border-radius: 0 8px 0 0; }
+  /* sort button header */
+  .sort-th {
+    display: flex; align-items: center; gap: 3px;
+    padding: 8px 10px; cursor: pointer; user-select: none;
+    white-space: normal; word-break: break-word;
+    transition: color 0.15s; min-height: 44px;
+  }
+  .sort-th:hover { color: var(--gold); }
+  .sort-th.asc  .sort-icon-asc  { opacity: 1; color: var(--gold); }
+  .sort-th.desc .sort-icon-desc { opacity: 1; color: var(--gold); }
+  .sort-icons { display: flex; flex-direction: column; align-items: center; gap: 1px; flex-shrink: 0; }
+  .sort-icon-asc, .sort-icon-desc { opacity: 0.3; font-size: 0.38rem; line-height: 1; transition: opacity 0.15s; }
+  /* body rows */
+  .strategy-table tbody tr:last-child td { border-bottom: none; }
+  .strategy-table tbody tr:hover td { background: rgba(255,255,255,0.015); }
+  .strategy-table tbody td {
+    padding: 10px 12px; border-right: 1px solid var(--border);
+    vertical-align: middle; font-size: 0.82rem; color: var(--text2);
+    white-space: normal; word-break: break-word; overflow: hidden; max-width: 0;
+  }
+  .strategy-table tbody td:last-child { border-right: none; }
+  /* column widths */
+  .strategy-table col.c-scenario { width: 68px; }
+  .strategy-table col.c-income   { width: 88px; }
+  .strategy-table col.c-dp       { width: 72px; }
+  .strategy-table col.c-ltv      { width: 58px; }
+  .strategy-table col.c-years    { width: 66px; }
+  .strategy-table col.c-monthly  { width: 150px; }
+  .strategy-table col.c-house    { width: 100px; }
+  .strategy-table col.c-del      { width: 40px; }
+
+  /* scenario badge inline */
+  .scenario-badge-inline {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.66rem; font-weight: 600; letter-spacing: 0.08em;
+    padding: 2px 8px; border-radius: 12px; white-space: nowrap;
+  }
+
+  /* house value large in table */
+  .house-val {
+    font-family: 'DM Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--text);
+    white-space: nowrap;
+  }
+  .mono-sm { font-family: 'Noto Sans TC', sans-serif; font-size: 0.95rem; color: var(--text); font-weight: 400; }
+
+  /* delete button */
+  .del-btn {
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 5px; border: 1px solid var(--border2); background: var(--bg4);
+    color: var(--text2); cursor: pointer; font-size: 0.68rem;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .del-btn:hover { background: rgba(224,92,92,0.12); color: var(--red); border-color: rgba(224,92,92,0.3); }
+  .td-del { text-align: center; }
+
+  .placeholder-hint {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 40px 20px; color: var(--text3); font-size: 0.85rem; text-align: center;
+  }
+  .placeholder-hint svg { opacity: 0.3; }
+  /* ── Card width control ── */
+  .card { width: 100%; }
+  .card-narrow { max-width: 792px; } /* 990 × 0.8 = 792，基本資料＆試算結果 */
+  .card-wide   { max-width: 1188px; } /* 策略與比較：加大20% */
+  @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+  .watermark { text-align: center; margin-top: 50px; font-size: 0.72rem; color: var(--text3); letter-spacing: 0.08em; }
+
+  .nav-link-bar {
+    max-width: 1188px; margin: 20px auto 28px;
+    padding: 10px 4px;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .nav-link {
+    font-family: 'Noto Sans TC', sans-serif; font-size: 0.82rem; font-weight: 500;
+    color: var(--gold); text-decoration: none; letter-spacing: 0;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 0; border-bottom: 1px solid transparent;
+    transition: border-color 0.2s, opacity 0.2s;
+  }
+  .nav-link.dim { color: var(--text3); }
+  .nav-link.dim:hover { border-bottom-color: var(--text3); }
+  .nav-link:hover { border-bottom-color: var(--gold); opacity: 0.82; }
+  .nav-link svg { flex-shrink: 0; }
+  .nav-sep { color: var(--border2); font-size: 0.82rem; user-select: none; padding: 0 6px; }
+
+  .share-btn-wrap { display: flex; justify-content: center; margin-top: 22px; }
+  .share-btn {
+    font-family: 'Noto Sans TC', sans-serif; font-size: 0.78rem; font-weight: 500;
+    color: var(--text2); background: var(--bg3);
+    border: 1px solid var(--border2); border-radius: 8px;
+    padding: 8px 20px; cursor: pointer; letter-spacing: 0.08em;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+  }
+  .share-btn:hover { color: var(--gold); border-color: var(--gold); background: rgba(201,168,76,0.07); }
+  .share-btn svg { flex-shrink: 0; }
+
+  /* ── PWA Install Banner ── */
+  #pwa-banner {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: var(--bg2); border-top: 1px solid var(--border2);
+    padding: 14px 18px 14px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  #pwa-banner.show { transform: translateY(0); }
+  #pwa-banner .pwa-icon {
+    width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0;
+    background: linear-gradient(135deg, #b8943f, #c9a84c);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #pwa-banner .pwa-icon svg { width: 28px; height: 28px; }
+  #pwa-banner .pwa-text { flex: 1; min-width: 0; }
+  #pwa-banner .pwa-text strong { display: block; font-size: 0.88rem; color: var(--text); font-weight: 600; }
+  #pwa-banner .pwa-text span { font-size: 0.72rem; color: var(--text2); }
+  #pwa-banner .pwa-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .pwa-btn-install {
+    padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #b8943f, #c9a84c);
+    color: #1a1200; font-family: 'Noto Sans TC', sans-serif;
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em;
+    transition: filter 0.15s;
+  }
+  .pwa-btn-install:hover { filter: brightness(1.08); }
+  .pwa-btn-dismiss {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text2); cursor: pointer; font-size: 0.8rem;
+    font-family: 'Noto Sans TC', sans-serif; transition: color 0.15s, border-color 0.15s;
+  }
+  .pwa-btn-dismiss:hover { color: var(--text); border-color: var(--text3); }
+
+  /* iOS manual install hint */
+  #ios-hint {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: var(--bg2); border-top: 1px solid var(--border2);
+    padding: 18px 20px;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    text-align: center;
+  }
+  #ios-hint.show { transform: translateY(0); }
+  #ios-hint p { font-size: 0.82rem; color: var(--text); line-height: 1.6; margin-bottom: 14px; }
+  #ios-hint .ios-share-icon {
+    display: inline-block; width: 18px; height: 18px; vertical-align: middle; margin: 0 3px;
+  }
+  #ios-hint .pwa-btn-dismiss {
+    display: inline-block; margin-top: 2px;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 52px 12px 40vh; }
+
+    /* stepper：按鈕縮小，input 字體縮小，確保不溢出 */
+    .step-btn { width: 30px; font-size: 0.9rem; flex-shrink: 0; }
+    .stepper input { font-size: 0.85rem; padding: 10px 4px; }
+
+    /* result-row：縮小 badge 欄與 + 欄，減少 padding */
+    .result-row {
+      grid-template-columns: 88px 1fr 1.4fr 40px;
+    }
+    .row-badge-col { padding: 12px 6px; }
+    .result-badge { font-size: 0.62rem; padding: 2px 6px; letter-spacing: 0.06em; }
+    .badge-sub { font-size: 0.6rem; }
+    .row-metric { padding: 12px 10px; }
+    .metric-label { font-size: 0.62rem; }
+    .metric-value.lg { font-size: 1.3rem; }
+    .metric-value.md { font-size: 0.9rem; }
+    .metric-sub { font-size: 0.6rem; }
+    .row-add-col { padding: 0 3px; }
+    .add-plus-btn { width: 24px; height: 24px; font-size: 0.9rem; }
+
+    /* card padding 收緊 */
+    .card { padding: 18px 14px; }
+
+    /* page title */
+    .page-title h1 { letter-spacing: 0.06em; }
+    .page-title { margin-bottom: 28px; }
+
+    /* select 字體縮小 */
+    .field select { font-size: 0.85rem; padding: 10px 28px 10px 10px; }
+    .field label { font-size: 0.75rem; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>購屋能力評估試算工具</h1>
+</div>
+
+<div class="nav-link-bar">
+  <a class="nav-link dim" href="https://home-loan-tool.vercel.app/">
+    房貸試算及風險評估工具
+  </a>
+  <span class="nav-sep">｜</span>
+  <a class="nav-link" href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+    購屋能力評估試算工具
+  </a>
+</div>
+
+<div class="container">
+
+  <!-- INPUT -->
+  <div class="card card-narrow">
+    <div class="section-label">基本條件</div>
+    <div class="grid-2">
+      <div class="field">
+        <label>家庭月收入（元）</label>
+        <div class="stepper">
+          <button class="step-btn" onclick="stepIncome(-1)">−</button>
+          <input type="text" id="income" value="100,000" min="0" step="1000" inputmode="numeric">
+          <button class="step-btn" onclick="stepIncome(1)">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>頭期款（萬元）</label>
+        <select id="downpayment"></select>
+      </div>
+      <div class="field">
+        <label>每月可接受房貸比例（%）</label>
+        <select id="ratio"></select>
+      </div>
+    </div>
+
+    <div class="credit-section">
+      <div class="section-label">信用條件</div>
+      <div class="grid-2">
+        <div class="field">
+          <label>貸款成數</label>
+          <select id="ltv"></select>
+        </div>
+        <div class="field">
+          <label>房貸年利率（%）</label>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepRate(-1)">−</button>
+            <input type="number" id="rate" value="2.6" step="0.1" min="0.1" max="20">
+            <button class="step-btn" onclick="stepRate(1)">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>貸款年限（年）</label>
+          <select id="years">
+            <option value="20">20 年</option>
+            <option value="30" selected>30 年</option>
+            <option value="40">40 年</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>還款方式</label>
+          <select id="method">
+            <option value="annuity">本息攤還（等額攤還）</option>
+            <option value="principal">本金攤還（本金平均攤還）</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <button class="calc-btn" onclick="calculate()">開 始 試 算</button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="card card-narrow">
+    <div class="section-label">試算結果</div>
+    <div id="resultsContent">
+      <div class="placeholder-hint">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="8" y="14" width="32" height="24" rx="3" stroke="#8d97b0" stroke-width="2"/><path d="M16 22h16M16 28h10" stroke="#8d97b0" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>填寫條件後按下「開始試算」，即可查看三段壓力分析結果</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATEGY & COMPARE -->
+  <div class="card card-wide">
+    <div class="compare-header-row">
+      <div class="section-label" style="margin-bottom:0;flex:1">策略與比較</div>
+      <span class="compare-count" id="compareCount">0 / 5 筆</span>
+    </div>
+    <div id="compareContent">
+      <div class="compare-empty" id="compareEmpty">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="10" width="36" height="28" rx="3" stroke="#8d97b0" stroke-width="2"/><path d="M14 20h8M14 26h14M14 32h6" stroke="#8d97b0" stroke-width="1.5" stroke-linecap="round"/><path d="M32 20h6M32 26h6M32 32h6" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" opacity=".5"/></svg>
+        <span>從試算結果點擊「＋」按鈕加入策略，最多可比較 10 筆</span>
+      </div>
+      <div class="compare-scroll" id="compareTable" style="display:none"></div>
+    </div>
+    <div class="share-btn-wrap">
+      <button class="share-btn" onclick="exportCompareImage()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10v1.5A1.5 1.5 0 003.5 13h7A1.5 1.5 0 0012 11.5V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        下載圖片
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="watermark">本工具僅供參考，實際購屋請諮詢專業財務顧問或銀行</div>
+
+<script>
+// ── Populate selects ─────────────────────────────────────
+(function() {
+  const dp = document.getElementById('downpayment');
+  for (let v = 50; v <= 800; v += 50) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v + ' 萬元';
+    if (v === 200) o.selected = true;
+    dp.appendChild(o);
+  }
+  const rt = document.getElementById('ratio');
+  for (let v = 20; v <= 50; v += 5) {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v + '%';
+    if (v === 30) o.selected = true;
+    rt.appendChild(o);
+  }
+  const ltv = document.getElementById('ltv');
+  [6, 6.5, 7, 7.5, 8, 8.5, 9].forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v + ' 成';
+    if (v === 8) o.selected = true;
+    ltv.appendChild(o);
+  });
+})();
+
+// ── Stepper helpers ─────────────────────────────────────
+function parseIncome() {
+  const el = document.getElementById('income');
+  return parseFloat(el.value.replace(/,/g, '')) || 100000;
+}
+function formatIncome(n) {
+  return Math.max(0, n).toLocaleString('en-US');
+}
+function stepIncome(dir) {
+  const el = document.getElementById('income');
+  const cur = parseFloat(el.value.replace(/,/g, '')) || 0;
+  el.value = formatIncome(cur + dir * 2000);
+}
+// Format input on manual entry
+document.getElementById('income').addEventListener('blur', function() {
+  const raw = parseFloat(this.value.replace(/,/g, '')) || 0;
+  this.value = formatIncome(raw);
+});
+document.getElementById('income').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') this.blur();
+});
+function stepRate(dir) {
+  const el = document.getElementById('rate');
+  const v = Math.round(((parseFloat(el.value) || 2.6) + dir * 0.1) * 10) / 10;
+  el.value = Math.max(0.1, Math.min(20, v)).toFixed(1);
+}
+
+// ── Calc helpers ─────────────────────────────────────────
+function calcMonthlyPayment(loan, annualRate, years, method) {
+  const r = annualRate / 100 / 12, n = years * 12;
+  if (method === 'annuity') {
+    if (r === 0) return loan / n;
+    return loan * r * Math.pow(1+r, n) / (Math.pow(1+r, n) - 1);
+  }
+  return loan / n + loan * r; // first month (highest)
+}
+function calcMaxLoan(budget, annualRate, years, method) {
+  const r = annualRate / 100 / 12, n = years * 12;
+  if (method === 'annuity') {
+    if (r === 0) return budget * n;
+    return budget * (Math.pow(1+r,n)-1) / (r*Math.pow(1+r,n));
+  }
+  return budget / (1/n + r);
+}
+function fmtW(n)   { return Math.round(n/1e4).toLocaleString() + ' 萬'; }
+function fmtM(n)   { return Math.round(n).toLocaleString() + ' 元'; }
+function fmtPct(n) { return (n*100).toFixed(1) + '%'; }
+
+// ── State ────────────────────────────────────────────────
+let lastResults = null;
+let compareList = [];
+let compareIdSeq = 0;
+
+// ── Calculate ─────────────────────────────────────────────
+function calculate() {
+  const income       = parseIncome();
+  const downpayment  = parseFloat(document.getElementById('downpayment').value) * 1e4;
+  const baseRatioPct = parseFloat(document.getElementById('ratio').value) / 100;
+  const rate         = parseFloat(document.getElementById('rate').value) || 2.2;
+  const years        = parseInt(document.getElementById('years').value);
+  const method       = document.getElementById('method').value;
+  const ltv          = parseFloat(document.getElementById('ltv').value) / 10;
+  // 成數上限貸款額（共用，由頭期款與成數決定，與壓力占比無關）
+  const loanByLtv    = ltv < 1 ? downpayment * ltv / (1 - ltv) : Infinity;
+
+  // Three scenarios: base ratio, base+2%, base+4%
+  const scenarios = [
+    { label: '健康', addPct: 0.00, badgeCls: 'badge-healthy', cardCls: 'healthy', dot: '#3ecfa0' },
+    { label: '偏高', addPct: 0.02, badgeCls: 'badge-high',    cardCls: 'high',    dot: '#e09a3e' },
+    { label: '緊戒', addPct: 0.04, badgeCls: 'badge-danger',  cardCls: 'danger',  dot: '#e05c5c' },
+  ];
+
+  const results = scenarios.map(s => {
+    const ratioPct     = baseRatioPct + s.addPct;
+    const budget       = income * ratioPct;
+    const loanByBudget = calcMaxLoan(budget, rate, years, method);
+    // 【修正】各情境個別判斷是否受成數上限截斷
+    const ltvCapped    = loanByBudget > loanByLtv;
+    const loan         = ltvCapped ? loanByLtv : loanByBudget;
+    const house        = loan + downpayment;
+    const monthly      = calcMonthlyPayment(loan, rate, years, method);
+    // 【修正】實際占比永遠由實際月付款反推，不以目標占比替代
+    const ratioVal     = monthly / income;
+    // 【修正】badge 顯示的占比：未截斷時顯示目標占比，截斷時顯示實際（較低）占比
+    const badgeRatio   = ltvCapped ? ratioVal : ratioPct;
+    return {
+      ...s, loan, house, monthly, ratioVal, ratioPct, badgeRatio, ltvCapped,
+      income, downpayment, rate, years, method, ltv
+    };
+  });
+  lastResults = results;
+
+  const resHtml = results.map((r, idx) => `
+    <div class="result-row ${r.cardCls}">
+      <div class="row-badge-col">
+        <div class="result-badge ${r.badgeCls}">
+          <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="${r.dot}"/></svg>
+          ${r.label}
+        </div>
+        <div class="badge-sub">月收占比<br><strong style="color:var(--text2);font-family:'DM Mono',monospace">${fmtPct(r.badgeRatio)}</strong></div>
+      </div>
+      <div class="row-metric">
+        <div class="metric-label">月付款（含利息）</div>
+        <div class="metric-value md">${fmtM(r.monthly)}</div>
+        <div class="metric-sub">實際占比 ${fmtPct(r.ratioVal)}</div>
+        ${r.ltvCapped ? '<div class="metric-sub" style="margin-top:3px;white-space:nowrap;color:var(--orange);font-size:0.63rem">⚠ 已達成數上限</div>' : ''}
+      </div>
+      <div class="row-metric center-content" style="border-right:none">
+        <div class="metric-label">建議可購入房屋總價</div>
+        <div class="metric-value lg">${fmtW(r.house)}</div>
+        <div class="metric-sub">貸款 ${fmtW(r.loan)}${r.ltvCapped ? '　<span style="color:var(--orange);font-size:0.63rem">條件上限</span>' : ''}</div>
+      </div>
+      <div class="row-add-col">
+        <button class="add-plus-btn" title="加入策略與比較" onclick="addToCompare(${idx})">＋</button>
+      </div>
+    </div>
+  `).join('');
+
+  const anyCapped = results.some(r => r.ltvCapped);
+  const capNotice = anyCapped
+    ? `<div style="margin-top:20px;text-align:center;color:var(--orange);font-size:0.63rem">⚠ 受自備款金額條件限制，建議調高「頭期款」或「貸款成數」。</div>`
+    : '';
+
+  document.getElementById('resultsContent').innerHTML = `<div class="results-stack">${resHtml}</div>${capNotice}`;
+}
+
+// ── Add to compare ────────────────────────────────────────
+function addToCompare(idx) {
+  if (!lastResults) return;
+  if (compareList.length >= 10) {
+    alert('策略與比較最多 10 筆，請先刪除部分項目再加入。');
+    return;
+  }
+  const r  = lastResults[idx];
+  const id = ++compareIdSeq;
+  const ltvDisp    = (r.ltv * 10).toFixed(1).replace('.0','') + '成';
+  const methodDisp = r.method === 'annuity' ? '本息' : '本金';
+  compareList.push({
+    id,
+    scenario: r.label, scenarioCls: r.cardCls, dot: r.dot, badgeCls: r.badgeCls,
+    income:      r.income,
+    downpayment: r.downpayment,
+    ltvDisp, ltvNum: r.ltv,
+    years:       r.years,
+    methodDisp,
+    monthly:     r.monthly,
+    ratioVal:    r.ratioVal,
+    house:       r.house,
+  });
+  renderCompare();
+}
+
+// ── Sort state ────────────────────────────────────────────
+let sortKey = null;
+let sortDir = 'asc';
+
+function sortCompare(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey = key; sortDir = 'asc';
+  }
+  compareList.sort((a, b) => {
+    let va = a[key], vb = b[key];
+    if (typeof va === 'string') va = parseFloat(va.replace(/[^0-9.]/g,'')) || 0;
+    if (typeof vb === 'string') vb = parseFloat(vb.replace(/[^0-9.]/g,'')) || 0;
+    return sortDir === 'asc' ? va - vb : vb - va;
+  });
+  renderCompare();
+}
+
+function removeCompare(id) {
+  compareList = compareList.filter(x => x.id !== id);
+  renderCompare();
+}
+
+// ── Render (horizontal: rows = entries, cols = metrics) ────
+function renderCompare() {
+  const count = compareList.length;
+  document.getElementById('compareCount').textContent = `${count} / 10 筆`;
+  const empty = document.getElementById('compareEmpty');
+  const table = document.getElementById('compareTable');
+  if (count === 0) { empty.style.display = ''; table.style.display = 'none'; return; }
+  empty.style.display = 'none'; table.style.display = '';
+
+  function sortBtn(key, label) {
+    const isActive = sortKey === key;
+    const cls = isActive ? sortDir : '';
+    return `<div class="sort-th ${cls}" onclick="sortCompare('${key}')">
+      <span>${label}</span>
+      <span class="sort-icons"><span class="sort-icon-asc">▲</span><span class="sort-icon-desc">▼</span></span>
+    </div>`;
+  }
+
+  // Format income as 萬元 with 1 decimal
+  function fmtIncomeW(n) {
+    const w = n / 10000;
+    return w.toFixed(1).replace(/\.0$/, '') + ' 萬元';
+  }
+
+  const headerCols = `
+    <th class="c-scenario">${sortBtn('scenario','情境')}</th>
+    <th class="c-income">${sortBtn('income','家庭月收入')}</th>
+    <th class="c-dp">${sortBtn('downpayment','頭期款')}</th>
+    <th class="c-ltv">${sortBtn('ltvNum','成數')}</th>
+    <th class="c-years">${sortBtn('years','貸款年限')}</th>
+    <th class="c-monthly">${sortBtn('monthly','月付款（月收）')}</th>
+    <th class="c-house">${sortBtn('house','建議購屋金額')}</th>
+    <th class="c-del"></th>
+  `;
+
+  const bodyRows = compareList.map((e) => `
+    <tr>
+      <td>
+        <span class="scenario-badge-inline ${e.badgeCls}">
+          <svg width="6" height="6" viewBox="0 0 6 6"><circle cx="3" cy="3" r="3" fill="${e.dot}"/></svg>
+          ${e.scenario}
+        </span>
+      </td>
+      <td><span class="mono-sm">${fmtIncomeW(e.income)}</span></td>
+      <td><span class="mono-sm">${Math.round(e.downpayment/1e4)}</span><span style="font-size:0.65rem;color:var(--text3)"> 萬</span></td>
+      <td><span class="mono-sm">${e.ltvDisp}</span></td>
+      <td><span class="mono-sm">${e.years}</span><span style="font-size:0.65rem;color:var(--text3)"> 年</span></td>
+      <td><span class="mono-sm">${fmtM(e.monthly)}</span><span style="font-size:0.65rem;color:var(--text3);margin-left:3px">(${fmtPct(e.ratioVal)})</span></td>
+      <td><span class="house-val">${fmtW(e.house)}</span></td>
+      <td class="td-del"><button class="del-btn" title="刪除" onclick="removeCompare(${e.id})">✕</button></td>
+    </tr>
+  `).join('');
+
+  table.innerHTML = `
+    <table class="strategy-table">
+      <colgroup>
+        <col class="c-scenario"><col class="c-income"><col class="c-dp">
+        <col class="c-ltv"><col class="c-years"><col class="c-monthly">
+        <col class="c-house"><col class="c-del">
+      </colgroup>
+      <thead><tr>${headerCols}</tr></thead>
+      <tbody>${bodyRows}</tbody>
+    </table>`;
+}
+
+// ── Export compare as image ───────────────────────────────
+async function exportCompareImage() {
+  const card = document.querySelector('.card.card-wide');
+  if (!card) return;
+
+  // 收集需暫時覆蓋樣式的元素
+  const shareWrap = card.querySelector('.share-btn-wrap');
+  const delBtns   = card.querySelectorAll('.del-btn');
+
+  // 先隱藏下載按鈕與刪除按鈕
+  if (shareWrap) shareWrap.style.visibility = 'hidden';
+  delBtns.forEach(b => b.style.visibility = 'hidden');
+
+  // ── 套用「白底黑字」臨時樣式 ──────────────────────────
+  const overrides = []; // [{ el, prop, prev }]
+
+  function ov(el, prop, val) {
+    overrides.push({ el, prop, prev: el.style[prop] });
+    el.style[prop] = val;
+  }
+
+  // Card 本身：白底、移除陰影
+  ov(card, 'background', '#ffffff');
+  ov(card, 'boxShadow', 'none');
+  ov(card, 'border', '1px solid #e0e0e0');
+
+  // card::before 金線條無法用 JS 直接改，用臨時 style tag 蓋掉
+  const tmpStyle = document.createElement('style');
+  tmpStyle.id = '__export_tmp';
+  tmpStyle.textContent = `
+    .card.card-wide::before { background: #e0e0e0 !important; opacity: 1 !important; }
+    .card.card-wide .section-label { color: #555 !important; }
+    .card.card-wide .section-label::after { background: #ddd !important; }
+    .card.card-wide .compare-count { color: #888 !important; }
+    .card.card-wide .compare-empty { color: #aaa !important; }
+    .card.card-wide .strategy-table thead th { background: #f5f5f5 !important; color: #666 !important; border-color: #ddd !important; }
+    .card.card-wide .strategy-table th, .card.card-wide .strategy-table td { border-color: #e8e8e8 !important; }
+    .card.card-wide .strategy-table tbody tr:hover td { background: transparent !important; }
+    .card.card-wide .strategy-table tbody td { color: #333 !important; background: transparent !important; }
+    .card.card-wide .sort-th { color: #555 !important; }
+    .card.card-wide .mono-sm { color: #222 !important; }
+    .card.card-wide .house-val { color: #111 !important; }
+    .card.card-wide [style*="color:var(--text3)"], .card.card-wide [style*="color: var(--text3)"] { color: #888 !important; }
+  `;
+  document.head.appendChild(tmpStyle);
+
+  try {
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+    const link = document.createElement('a');
+    link.download = '策略與比較_' + new Date().toISOString().slice(0,10) + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (e) {
+    alert('圖片匯出失敗，請再試一次。');
+  } finally {
+    // 還原所有樣式
+    overrides.forEach(({ el, prop, prev }) => { el.style[prop] = prev; });
+    const t = document.getElementById('__export_tmp');
+    if (t) t.remove();
+    if (shareWrap) shareWrap.style.visibility = '';
+    delBtns.forEach(b => b.style.visibility = '');
+  }
+}
+</script>
+
+<!-- ── PWA Install Banner (Android / Chrome) ── -->
+<div id="pwa-banner" role="dialog" aria-label="安裝應用程式">
+  <div class="pwa-icon">
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 3L3 11h3v13h6v-8h4v8h6V11h3L14 3z" fill="#1a1200" stroke="#1a1200" stroke-width="0.5" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="pwa-text">
+    <strong>加入主畫面</strong>
+    <span>離線也能使用，方便隨時試算</span>
+  </div>
+  <div class="pwa-actions">
+    <button class="pwa-btn-install" id="pwa-install-btn">安裝</button>
+    <button class="pwa-btn-dismiss" id="pwa-dismiss-btn">✕</button>
+  </div>
+</div>
+
+<!-- ── iOS Manual Install Hint ── -->
+<div id="ios-hint" role="dialog" aria-label="加入主畫面說明">
+  <p>
+    在 Safari 點選底部工具列的
+    <svg class="ios-share-icon" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 1v10M6 4l3-3 3 3" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3 8v7a1 1 0 001 1h10a1 1 0 001-1V8" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    「分享」，再選「加入主畫面」即可把本工具安裝到 iPhone／iPad。
+  </p>
+  <button class="pwa-btn-dismiss" id="ios-dismiss-btn">我知道了</button>
+</div>
+
+<script>
+// ── Service Worker 註冊 ──────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[PWA] SW 已註冊，scope:', reg.scope))
+      .catch(err => console.warn('[PWA] SW 註冊失敗:', err));
+  });
+}
+
+// ── PWA Install Banner（Android / Chrome）────────────────
+let deferredPrompt = null;
+const banner     = document.getElementById('pwa-banner');
+const installBtn = document.getElementById('pwa-install-btn');
+const dismissBtn = document.getElementById('pwa-dismiss-btn');
+const pwaHidden  = sessionStorage.getItem('pwa-banner-hidden');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!pwaHidden) {
+    setTimeout(() => banner.classList.add('show'), 1200);
+  }
+});
+
+installBtn && installBtn.addEventListener('click', async () => {
+  banner.classList.remove('show');
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('[PWA] 安裝結果:', outcome);
+  deferredPrompt = null;
+});
+
+dismissBtn && dismissBtn.addEventListener('click', () => {
+  banner.classList.remove('show');
+  sessionStorage.setItem('pwa-banner-hidden', '1');
+});
+
+window.addEventListener('appinstalled', () => {
+  banner.classList.remove('show');
+  console.log('[PWA] 已成功安裝！');
+});
+
+// ── iOS Safari 安裝提示 ──────────────────────────────────
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+function isInStandaloneMode() {
+  return window.navigator.standalone === true;
+}
+
+const iosHint       = document.getElementById('ios-hint');
+const iosDismissBtn = document.getElementById('ios-dismiss-btn');
+const iosHidden     = sessionStorage.getItem('ios-hint-hidden');
+
+if (isIOS() && !isInStandaloneMode() && !iosHidden) {
+  setTimeout(() => iosHint && iosHint.classList.add('show'), 1800);
+}
+
+iosDismissBtn && iosDismissBtn.addEventListener('click', () => {
+  iosHint.classList.remove('show');
+  sessionStorage.setItem('ios-hint-hidden', '1');
+});
+</script>
+</body>
+</html>
