@@ -1,0 +1,25 @@
+{
+  "name": "購屋能力評估試算工具",
+  "short_name": "購屋試算",
+  "description": "評估購屋能力的試算工具，分析三段壓力情境與策略比較",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f4f0",
+  "theme_color": "#f5f4f0",
+  "orientation": "any",
+  "lang": "zh-TW",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
